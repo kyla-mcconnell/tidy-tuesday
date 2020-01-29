@@ -1,0 +1,58 @@
+---
+title: "20_01_28_TidyTuesday"
+author: "Kyla McConnell"
+date: "1/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+sf_trees <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-28/sf_trees.csv')  
+
+library(tidyverse)
+library(lubridate)
+
+sf_trees$decade <- year(sf_trees$date) - year(sf_trees$date) %% 10
+sf_trees$year <- as.numeric(year(sf_trees$date))
+sf_trees$caretaker <- as.factor(sf_trees$caretaker)
+sf_trees$caretaker_binary <- ifelse(sf_trees$caretaker == "Private", "Private", "Public")
+```
+
+# San Fransisco Trees
+Tidy Tuesday with R Ladies Freiburg 01/28/2020
+
+Trees planted in San Francisco since 1970, showing the year the city transferred liability of trees (and their upkeep) to private citizens. This ordinance was reversed in 2016  but without funds set aside for planting new trees. 
+
+```{r}
+ggplot(sf_trees %>% filter(year >= 1970 & decade != 2020)) +
+  geom_bar(aes(x=year, fill=as.factor(decade))) +
+  geom_smooth(
+    data=sf_trees %>% filter(year >= 1970 & decade != 2020) %>% group_by(year) %>%
+      summarise(count=n_distinct(tree_id)),
+    aes(x = year, y = count), method = "loess", color="#6A6D6A") +
+  scale_fill_manual(values=c("#5BE04A","#4CBA3E","#3C9830","#317E27","#26611F"))+
+  ylim(0,4500)+
+  theme_light()+
+  xlab("Year")+
+  ylab("Number of trees planted")+
+  ggtitle("Number of trees planted per year in San Francisco")+
+  geom_vline(xintercept=2011, linetype=3) +
+  theme(legend.position="none")+
+  annotate(geom="text", x=2011, y=3500, label="City transfers\ntrees to private liability", hjust=-.03, size=3)
+```
+
+```{r}
+ggplot(sf_trees %>% filter(year >= 1970 & decade != 2020)) +
+  geom_bar(aes(x=year, fill=as.factor(decade))) +
+  geom_smooth(data=sf_trees %>% filter(year >= 1970 & decade != 2020) %>% group_by(year, caretaker_binary) %>% summarise(count=n_distinct(tree_id)),
+              aes(x = year, y = count), method = "loess", color="#6A6D6A")+
+  facet_wrap(~caretaker_binary)+
+  scale_fill_manual(values=c("#5BE04A","#4CBA3E","#3C9830","#317E27","#26611F"))+
+  ylim(0,4000)+
+  theme_light()+
+  xlab("Year")+
+  ylab("Number of trees planted")+
+  ggtitle("Number of trees planted per year in San Francisco\nsince 1970 by private and public caretakers")+
+  geom_vline(xintercept=2011, linetype=3) +
+  theme(legend.position="none")+
+  annotate(geom="text", x=2011, y=3500, label="2011: City transfers\ntrees to private liability", hjust=1.03, size=3)
+```
