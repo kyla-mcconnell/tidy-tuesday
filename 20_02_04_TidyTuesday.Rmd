@@ -1,0 +1,65 @@
+---
+title: "20_02_04_TidyTuesday"
+author: "Kyla McConnell"
+date: "2/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(maps)
+library(sf)
+library(rayshader)
+library(av)
+
+attendance <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv')
+
+team_loc <- read_csv("https://raw.githubusercontent.com/ali-ce/datasets/master/NFL/NFL%20Teams.csv") #from Github user ali-ce
+
+states <- st_as_sf(map("state", plot = FALSE, fill = TRUE)) #US state data
+
+```
+
+# Football attendance by state
+
+###Join football team names to the state they are located in
+```{r}
+df <- attendance %>%
+  unite(team_full, team, team_name, sep=" ") %>%
+  left_join(team_loc, by=c("team_full"= "Team")) %>%
+  select("team_full", "year", "total", "home", "away", "week", "weekly_attendance", "Location") %>%
+  separate("Location", c("City", "State"), sep=", ") %>%
+  mutate(State = tolower(State))
+```
+
+###Filter to only the year 2019, add state boundary geoms
+```{r}
+df_state_2019 <- df %>%
+  filter(year == 2019) %>%
+  select(State, weekly_attendance) %>%
+  group_by(State) %>%
+  summarize(total_attend = sum(weekly_attendance, na.rm = TRUE))  %>%
+  full_join(states, by=c("State" = "ID"))
+
+df_state_2019$total_attend <- replace_na(df_state_2019$total_attend, 0) #add 0s to states with no team
+```
+
+###Plot (gpplot)
+```{r} 
+mtplot <- ggplot(data = df_state_2019$geom) +
+    geom_sf(aes(fill=df_state_2019$total_attend))+
+  scale_fill_continuous(low = "#ffd23d", high = "#d01727")+
+  theme(legend.position = "none", panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_blank(), panel.background=element_blank())+
+  ggtitle("Football attendance in 2019")
+
+mtplot
+```
+
+###Create Rayshader 3D plot
+```{r} 
+plot_gg(mtplot)
+
+#render_movie(mtplot, clear = TRUE)
+```
+
+Wishlist: rotating graph as gif, more informative labels/legend, display number of teams per state
