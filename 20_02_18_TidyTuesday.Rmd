@@ -1,0 +1,130 @@
+---
+title: "TidyTuesday 18.02.20"
+author: "Kyla McConnell"
+date: "2/18/2020"
+output: html_document
+---
+
+##Food consumption and CO-emission by country
+```{r}
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw()) #black/white better for maps in ggplot
+library(cowplot)
+library(sf) #for spatial geoms
+library(rnaturalearth) #for world map data
+library(rnaturalearthdata) #for world map data
+library(ggspatial)
+library(ggrepel)
+library(googleway)
+library(rgeos)
+library(gridExtra) #for multiple ggplots
+library(grid)#for multiple ggplots
+
+food_consumption <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-18/food_consumption.csv')
+
+food_consumption$country <- gsub("USA", "United States", food_consumption$country)  #name didn't match world map data
+
+food_consumption$food_category <- gsub("Milk - inc. cheese", "Milk/Cheese", food_consumption$food_category) #labels too long for nice barchart
+food_consumption$food_category <- gsub("Nuts inc. Peanut Butter", "Nuts", food_consumption$food_category)
+food_consumption$food_category <- gsub("Soybeans", "Soy", food_consumption$food_category)
+food_consumption$food_category <- gsub("Wheat and Wheat Products", "Wheat", food_consumption$food_category)
+food_consumption$food_category <- gsub("Lamb & Goat", "Lamb/Goat", food_consumption$food_category)
+
+food_consumption$country <- as.factor(food_consumption$country)
+food_consumption$food_category <- as.factor(food_consumption$food_category)
+
+world <- ne_countries(scale = "medium", returnclass = "sf") #world map data
+```
+
+
+Add geom data by country
+```{r}
+food <- world %>%
+  select(country = name, continent, subregion, economy, income_grp, pop_est, gdp_md_est, geometry) %>%
+  right_join(food_consumption, by="country")
+```
+
+Plot countries by CO-emissions from food products
+```{r}
+a <- food %>%
+  group_by(country) %>%
+  summarize(sum_emmision = sum(co2_emmission)) %>%
+  ggplot() +
+  geom_sf(data=world) +
+  geom_sf(aes(fill=sum_emmision), show.legend=FALSE)+
+  scale_fill_viridis_c(option="plasma")+
+  labs(
+    title="CO-emissions due to food products globally",
+    fill="Per capita\nCO-emmissions"
+  )
+
+a
+```
+
+Create bar chart of world CO-emissions by food type
+```{r}
+b <- ggplot(data=food_consumption)+
+  geom_col(aes(x=reorder(food_category, -co2_emmission), y=co2_emmission, fill=co2_emmission), show.legend=FALSE)+
+  coord_flip()+
+  scale_fill_viridis_c(option="plasma")+
+  theme(
+    axis.title.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank()
+  )+ 
+  ylab("Global relative CO-emmissions")
+
+b
+```
+
+Create map of top beef eating countries
+```{r}
+c <- food[which(food$food_category == "Beef"),] %>%
+  group_by(country) %>%
+  filter(consumption > 25) %>%
+  ggplot()+
+    geom_sf(data=world) +
+    geom_sf(aes(fill=consumption), show.legend=FALSE)+
+  scale_fill_gradient(low="yellow", high="yellow")+
+  labs(
+    title="Hotspots of beef consumption"
+  )
+
+c
+```
+
+Create map of top mik/cheese eating countries
+```{r}
+d <- food[which(food$food_category == "Milk/Cheese"),] %>%
+  group_by(country) %>%
+  filter(consumption > 220) %>%
+  ggplot()+
+    geom_sf(data=world) +
+    geom_sf(aes(fill=consumption), show.legend=FALSE)+
+  scale_fill_gradient(low="yellow", high="yellow")+
+  labs(
+    title="Hotspots of milk/cheese consumption"
+  )
+
+d
+```
+
+Create dashboard
+```{r}
+lay <- rbind(c(1,1,1,1,2,2,2),
+             c(1,1,1,1,2,2,2),
+             c(1,1,1,1,2,2,2),
+             c(3,3,3,4,4,4,4),
+             c(3,3,3,4,4,4,4))
+
+all_graphs <- arrangeGrob(
+  a, b, c, d,
+  layout_matrix = lay,
+  top=textGrob("Cows & Global Warming",gp=gpar(fontsize=20))
+)
+
+
+ggsave("Cows_GlobalWarming.png", all_graphs)
+```
+
