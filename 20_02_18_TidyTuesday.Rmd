@@ -1,8 +1,10 @@
 ---
-title: "TidyTuesday 18.02.20"
+title: 'TidyTuesday: CO-emissions from food'
 author: "Kyla McConnell"
 date: "2/18/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ##Food consumption and CO-emission by country
@@ -124,7 +126,7 @@ all_graphs <- arrangeGrob(
   top=textGrob("Cows & Global Warming",gp=gpar(fontsize=20))
 )
 
-
-ggsave("Cows_GlobalWarming.png", all_graphs)
+all_graphs
+#ggsave("Cows_GlobalWarming.png", all_graphs)
 ```
 

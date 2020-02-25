@@ -1,8 +1,10 @@
 ---
-title: "20_02_04_TidyTuesday"
+title: 'TidyTuesday: Football attendance by state'
 author: "Kyla McConnell"
 date: "2/4/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
