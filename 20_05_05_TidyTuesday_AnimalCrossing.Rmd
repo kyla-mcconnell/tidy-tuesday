@@ -1,0 +1,88 @@
+---
+title: "20/05/05 TidyTuesday Animal Crossing"
+author: "Kyla McConnell"
+date: "5/8/2020"
+output: html_document
+---
+
+```{r setup}
+library(tidyverse)
+library(tidytext)
+library(cowplot)
+library(magick)
+
+critic <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/critic.tsv')
+user_reviews <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/user_reviews.tsv')
+items <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/items.csv')
+villagers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/villagers.csv')
+```
+
+```{r}
+villagers <- villagers %>% 
+  mutate(name = tolower(name))
+
+character_reviews <- user_reviews %>% 
+  unnest_tokens(word, text) %>%
+  mutate(name = ifelse(tolower(word) %in% villagers$name, word, "none")) %>% 
+  filter(name != "none") %>% 
+  left_join(villagers, by="name")
+```
+
+```{r}
+character_grades <- character_reviews %>% 
+  group_by(name, personality) %>% 
+  summarize(average_grade = mean(grade)) %>% 
+  ungroup()
+
+character_reviews <- character_reviews %>% 
+  left_join(character_grades)
+```
+
+```{r}
+names_plot <- ggplot(data=character_grades, aes(x=reorder(name, -average_grade), y=average_grade, fill=personality)) +
+  geom_col(show.legend=FALSE)+ 
+  scale_fill_manual(values=c("#99d6ff", "#BFC2C6", "#C4E5C5", "#FFC9BF", "#95E3DF", "#F6F4CB", "#f7b26d", "#CAA199"))+
+  xlab("Villager name") +
+  ylab("Average review (out of 10)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, family="serif"), panel.background=element_blank(), plot.title = element_text(family = "serif"), axis.text.y = element_text(family="serif"), axis.title=element_text(family="serif"))
+
+names_plot <- ggdraw() +
+  draw_plot(names_plot) +
+  draw_image("https://vignette.wikia.nocookie.net/siivagunner/images/9/99/Animal_Crossing-_New_Horizons.jpg/revision/latest?cb=20190913005933", x=0.33, y=0.2, scale=.2)
+
+```
+
+```{r}
+species_plot <- character_reviews %>% 
+  group_by(personality) %>% 
+  summarize(average_grade = mean(average_grade)) %>%
+  ggplot(aes(x=personality, y=average_grade, fill=personality))+
+  geom_col(show.legend=FALSE)+ 
+  xlab("Villager personality") +
+  ylab("Average review (out of 10)")+
+  ggtitle("How do villager's personalities affect user reviews in Animal Crossing?")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, family="serif"), panel.background=element_blank(), plot.title = element_text(family = "serif", face="bold"), axis.text.y = element_text(family="serif"), axis.title=element_text(family="serif")) + 
+  scale_fill_manual(values=c("#99d6ff", "#BFC2C6", "#C4E5C5", "#FFC9BF", "#95E3DF", "#F6F4CB", "#f7b26d", "#CAA199")) +
+  scale_y_discrete(limits=c(0, 2, 4, 6, 8, 10))+
+  ylim(0,10)
+
+species_images <- ggdraw() +
+  draw_plot(species_plot) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/robin.e227ada.png", x = 0.31, y = 0.15, scale = .2) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/marshal.20eb375.png", x = 0.2, y = -0.05, scale = .2)+
+  draw_image("https://villagerdb.com/images/villagers/thumb/flora.b45e15f.png", x = 0.09, y = 0.07, scale = .2)+
+  draw_image("https://villagerdb.com/images/villagers/thumb/merengue.6609ed1.png", x = -0.03, y = 0.12, scale = .2) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/pashmina.8916368.png", x = 0.41, y = 0.08, scale = .2) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/beau.b905798.png", x = -0.12, y = 0.15, scale = .2) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/sterling.fef732a.png", x = -0.24, y = 0, scale = .2) +
+  draw_image("https://villagerdb.com/images/villagers/thumb/del.5f28b25.png", x = -0.36, y = 0.1, scale = .2) 
+```
+
+
+```{r}
+both_plots <- plot_grid(species_images, names_plot, ncol=1)
+ggsave("20_05_05_TidyTuesday_AnimalCrossing.jpeg", both_plots, width=7, height=7, units="in")
+
+both_plots
+```
+

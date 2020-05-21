@@ -58,3 +58,6 @@ ggplot(sf_trees %>% filter(year >= 1970 & decade != 2020)) +
   theme(legend.position="none")+
   annotate(geom="text", x=2011, y=3500, label="2011: City transfers\ntrees to private liability", hjust=1.03, size=3)
 ```
+
+
+
