@@ -5,6 +5,8 @@ date: "5/8/2020"
 output: html_document
 ---
 
+Load libraries and data.
+
 ```{r setup}
 library(tidyverse)
 library(tidytext)
